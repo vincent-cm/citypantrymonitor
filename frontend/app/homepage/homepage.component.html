@@ -1,0 +1,37 @@
+<!-- Wide card with share menu button -->
+<style>
+  .demo-card-wide.mdl-card {
+    width: 512px;
+  }
+
+  .demo-card-wide>.mdl-card__title {
+    color: #fff;
+    height: 176px;
+    background: url('../../assets/bg.jpg') center / cover;
+  }
+
+  .demo-card-wide>.mdl-card__menu {
+    color: #fff;
+  }
+
+</style>
+<div class="wrapper">
+  <div class="demo-card-wide mdl-card mdl-shadow--2dp">
+    <div class="mdl-card__title">
+      <h1 class="mdl-card__title-text font-grey">City Pantry Operations Monitor</h1>
+    </div>
+    <div class="mdl-card__supporting-text">
+      Welcome to the City Pantry Operations Monitor. Here you can view orders and monitor them in real time.
+    </div>
+    <div class="mdl-card__actions mdl-card--border">
+      <a [routerLink]="['/orders']" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">
+        Order List
+      </a>
+    </div>
+    <div class="mdl-card__menu">
+      <button (click)="openGitHub()" class="mdl-button mdl-button--icon mdl-button--colored mdl-js-button mdl-js-ripple-effect">
+        <i class="material-icons">face</i>
+      </button>
+    </div>
+  </div>
+</div>

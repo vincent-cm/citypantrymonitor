@@ -1,0 +1,145 @@
+<div class="demo-layout-transparent mdl-layout mdl-js-layout mdl-layout--fixed-header">
+  <header class="mdl-layout__header mdl-layout__header--transparent">
+    <div class="mdl-layout__header-row">
+      <!-- Title -->
+      <span class="mdl-layout-title">Orders</span>
+      <!-- Add spacer, to align navigation to the right -->
+      <div class="mdl-layout-spacer"></div>
+      <!-- Navigation -->
+      <nav class="mdl-navigation">
+        <a class="mdl-navigation__link" href="">Load More</a>
+        <a class="mdl-navigation__link" href="">Scroll Top</a>
+      </nav>
+    </div>
+  </header>
+  <div class="mdl-layout__drawer">
+    <span class="mdl-layout-title">Orders</span>
+    <nav class="mdl-navigation">
+      <a class="mdl-navigation__link" href="">Load More</a>
+      <a class="mdl-navigation__link" href="">Scroll Top</a>
+    </nav>
+  </div>
+  <main class="mdl-layout__content">
+    <div class="mdl-grid">
+      <div class="mdl-cell mdl-cell--12-col as-grid">
+        <!--[if lte IE 9]>
+      <div class="ie_wrapper">
+      <!--<![endif]-->
+        <table class="mdl-data-table mdl-js-data-table mdl-shadow--1dp">
+          <thead>
+            <tr>
+              <th class="mdl-data-table__cell--non-numeric">Customer</th>
+              <th class="mdl-data-table__cell--non-numeric">Driver</th>
+              <th class="mdl-data-table__cell--non-numeric d-none d-md-table-cell">Vendor</th>
+              <th class="mdl-data-table__cell--non-numeric d-none d-xl-table-cell">Food</th>
+              <th class="mdl-data-table__cell--non-numeric">Distance</th>
+              <th class="mdl-data-table__cell--non-numeric d-none d-lg-table-cell text-right">Price</th>
+            </tr>
+          </thead>
+          <tbody #tableScrollable [style.height.px]="fixHeight">
+            <tr *ngFor="let item of orders; let idx=index">
+              <td class="mdl-data-table__cell--non-numeric">
+                <small class="text-muted">Customer</small>
+                <div class="font-weight-bold">
+                  {{item.customer}}
+                </div>
+                <small class="text-muted">Requested Delivery Date</small>
+                <div>
+                  {{item.requestedDeliveryDate | date:'short' }}
+                </div>
+                <small class="text-muted">Head Count</small>
+                <div>
+                  {{item.headcount}}
+                </div>
+              </td>
+              <td class="mdl-data-table__cell--non-numeric">
+                <small class="text-muted">Driver</small>
+                <div class="font-weight-bold">
+                  {{item.driverName}}
+                </div>
+                <small class="text-muted" *ngIf="item.deliveredAt">Delivered At</small>
+                <div *ngIf="item.deliveredAt">
+                  {{item.deliveredAt | date:'short'}}
+                </div>
+
+                <small class="text-muted" *ngIf="item.lateReason">Late Reason</small>
+                <div *ngIf="item.lateReason">
+                  {{item.lateReason}}
+                </div>
+                <small class="text-muted" *ngIf="item.deliveredAt">Delay</small>
+                <div *ngIf="item.deliveredAt" [class.text-warning]="item.delayMinutes > 0 && item.delayMinutes < 10" [class.text-success]="item.delayMinutes === 0"
+                  [class.text-danger]="item.delayMinutes >= 10">
+                  {{item.delayMinutes}} Minute(s)
+                </div>
+              </td>
+              <td class="mdl-data-table__cell--non-numeric d-none d-md-table-cell">
+                <small class="text-muted">Vendor</small>
+                <div class="font-weight-bold">
+                  {{item.vendor}}
+                </div>
+                <small class="text-muted">Serving Style</small>
+                <div>
+                  {{item.servingStyle}}
+                </div>
+                <small class="text-muted">Commission Rate</small>
+                <div>
+                  {{item.commissionRate}}
+                </div>
+              </td>
+              <td class="mdl-data-table__cell--non-numeric d-none d-xl-table-cell">
+                <small class="text-muted">Packaging</small>
+
+                <div>
+                  {{item.packaging}}
+                </div>
+                <small class="text-muted">Payment Type</small>
+
+                <div>
+                  {{item.paymentType}}
+                </div>
+              </td>
+              <td class="mdl-data-table__cell--non-numeric">
+                <small class="text-muted">Distance Left</small>
+                <div class="font-weight-bold">
+                  {{item.distanceLeft | number:'1.1-2'}} mi
+                </div>
+                <small class="text-muted">Total Distance</small>
+                <div>
+                  {{item.totalDistance | number:'1.1-2'}} mi
+                </div>
+              </td>
+              <td class="mdl-data-table__cell--non-numeric d-none d-lg-table-cell text-right">
+                <div>
+                  <small class="text-muted">Delevery</small>
+                  <span>£{{item.price?.delivery | number:'1.2'}}</span>
+                </div>
+                <div>
+                  <small class="text-muted">Items</small>
+                  <span>£{{item.price?.items | number:'1.2'}}</span>
+                </div>
+                <div>
+                  <small class="text-muted">Total</small>
+                  <span>£{{item.price?.total | number:'1.2'}}</span>
+                </div>
+              </td>
+            </tr>
+
+            <ng-container *ngIf="hasMore; else elseTemplate">
+              <tr>
+                <app-spin-kit></app-spin-kit>
+              </tr>
+            </ng-container>
+            <ng-template #elseTemplate>
+              <tr>
+                <div class="center-info">No More Data</div>
+              </tr>
+            </ng-template>
+          </tbody>
+        </table>
+        <!--[if lte IE 9]>
+      </div>
+      <!--<![endif]-->
+      </div>
+    </div>
+  </main>
+</div>

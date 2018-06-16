@@ -1,0 +1,49 @@
+.demo-layout-transparent {
+  background: gray;
+  >.mdl-layout__header,
+  >.mdl-layout__drawer-button {
+    color: white;
+  }
+  .as-grid {
+    display: grid;
+  }
+  .mdl-layout__content {
+    overflow: hidden;
+  }
+}
+
+// to make table scrollable
+tbody {
+  display: block;
+  overflow: auto;
+}
+
+thead,
+tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+thead {
+  width: calc( 100% - 1em);
+  box-shadow: 0px 1px #0003;
+}
+
+table {
+  width: 100%;
+}
+
+.ie_wrapper {
+  overflow-x: hidden;
+  overflow-y: auto;
+  tbody {
+    height: auto;
+  }
+}
+
+.center-info {
+  margin: 100px auto;
+  width: 70px;
+  text-align: center;
+}
