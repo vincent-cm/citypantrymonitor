@@ -75,7 +75,6 @@ import { OrderListService } from '../services/order-list.service';
 import { Order } from '../model/order.model';
 import {
   distanceInMiBetweenEarthCoordinates,
-  isInArray
 } from '../utility/tools';
 import { pageQueueLimit, ordersPerPage } from '../utility/resource';
 declare var componentHandler: any;
