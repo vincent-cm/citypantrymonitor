@@ -36,7 +36,7 @@
               <th class="mdl-data-table__cell--non-numeric d-none d-lg-table-cell text-right">Price</th>
             </tr>
           </thead>
-          <tbody #tableScrollable [style.height.px]="fixHeight">
+          <tbody #scrollTarget [style.height.px]="fixHeight">
             <tr *ngFor="let item of orders; let idx=index">
               <td class="mdl-data-table__cell--non-numeric">
                 <small class="text-muted">Customer</small>
@@ -107,11 +107,17 @@
                 <div>
                   {{item.totalDistance | number:'1.1-2'}} mi
                 </div>
+                <div class="progress" style="margin-top: 0.75em;">
+                  <div class="progress-bar progress-bar-striped " role="progressbar" [class.progress-bar-animated]="item.distanceLeft !== 0"
+                    [class.bg-danger]="item.distanceLeft > item.totalDistance" [class.bg-success]="item.distanceLeft === 0"
+                    [style.width.%]="100 - item.distanceLeft / item.totalDistance * 100"></div>
+                </div>
               </td>
               <td class="mdl-data-table__cell--non-numeric d-none d-lg-table-cell text-right">
                 <div>
                   <small class="text-muted">Delevery</small>
-                  <span>£{{item.price?.delivery | number:'1.2'}}</span>
+                  <span *ngIf="item.price?.delivery">£{{item.price?.delivery | number:'1.2'}}</span>
+                  <span *ngIf="!item.price?.delivery">Free</span>
                 </div>
                 <div>
                   <small class="text-muted">Items</small>
@@ -125,7 +131,7 @@
             </tr>
 
             <ng-container *ngIf="hasMore; else elseTemplate">
-              <tr>
+              <tr #scrollElement>
                 <app-spin-kit></app-spin-kit>
               </tr>
             </ng-container>
