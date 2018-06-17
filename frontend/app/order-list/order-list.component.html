@@ -7,16 +7,16 @@
       <div class="mdl-layout-spacer"></div>
       <!-- Navigation -->
       <nav class="mdl-navigation">
-        <a class="mdl-navigation__link" href="">Load More</a>
-        <a class="mdl-navigation__link" href="">Scroll Top</a>
+        <a class="mdl-navigation__link">Page Sequence: {{viewedPages | json}}</a>
+        <a class="mdl-navigation__link">Showing Orders: {{this.orders?.length || 0}}</a>
       </nav>
     </div>
   </header>
   <div class="mdl-layout__drawer">
     <span class="mdl-layout-title">Orders</span>
     <nav class="mdl-navigation">
-      <a class="mdl-navigation__link" href="">Load More</a>
-      <a class="mdl-navigation__link" href="">Scroll Top</a>
+      <a class="mdl-navigation__link">Page Sequence: {{viewedPages | json}}</a>
+      <a class="mdl-navigation__link">Showing Orders: {{this.orders?.length || 0}}</a>
     </nav>
   </div>
   <main class="mdl-layout__content">
@@ -37,6 +37,13 @@
             </tr>
           </thead>
           <tbody #scrollTarget [style.height.px]="fixHeight">
+            <ng-container *ngIf="hasMoreUp; else upIf">
+              <tr #scrollUpElement appLazyLoad [scrollTarget]="scrollTarget" (onLoad)="loadList('up')">
+                <app-spin-kit></app-spin-kit>
+              </tr>
+            </ng-container>
+            <ng-template #upIf>
+            </ng-template>
             <tr *ngFor="let item of orders; let idx=index">
               <td class="mdl-data-table__cell--non-numeric">
                 <small class="text-muted">Customer</small>
@@ -130,8 +137,8 @@
               </td>
             </tr>
 
-            <ng-container *ngIf="hasMore; else downIf">
-              <tr #scrollElement>
+            <ng-container *ngIf="hasMoreDown; else downIf">
+              <tr #scrollDownElement appLazyLoad [scrollTarget]="scrollTarget" (onLoad)="loadList('down')">
                 <app-spin-kit></app-spin-kit>
               </tr>
             </ng-container>

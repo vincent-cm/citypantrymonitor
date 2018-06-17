@@ -15,6 +15,7 @@ import { environment } from '../environments/environment';
 import { ApiModule } from './api.module';
 import { Configuration } from './configuration';
 import { SpinKitModule } from './spin-kit/spin-kit.module';
+import { LazyLoadModule } from './lazy-load/lazy-load.module';
 
 // to consider a production ready configurable service
 // create a injectable param for any service, starting below:
@@ -37,7 +38,8 @@ export function configurationFactory() {
     HttpModule,
     BrowserAnimationsModule,
     ApiModule.forRoot(configurationFactory),
-    SpinKitModule
+    SpinKitModule,
+    LazyLoadModule
   ],
   providers: [
     OrderListService,

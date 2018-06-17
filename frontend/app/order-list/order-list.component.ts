@@ -62,11 +62,13 @@ import {
 } from 'rxjs/operators';
 import 'rxjs/add/operator/finally';
 import 'rxjs/add/operator/first';
-
 import { OrderListService } from '../services/order-list.service';
 import { Order } from '../model/order.model';
-import { distanceInMiBetweenEarthCoordinates } from '../utility/tools';
-import { scrollEventTimeout, debounceTimeOut } from '../utility/resource';
+import {
+  distanceInMiBetweenEarthCoordinates,
+  isInArray
+} from '../utility/tools';
+import { pageQueueLimit, ordersPerPage } from '../utility/resource';
 declare var componentHandler: any;
 
 @Component({
@@ -79,23 +81,21 @@ export class OrderListComponent
   public orders: Order[] = [];
   public isLoading = false;
   public currentPage = 1;
-  public hasMore = false;
-  public orderPropertyTypeList;
+  public hasMoreDown = false;
+  public hasMoreUp = false;
   public fixHeight = window.innerHeight - 200;
   public cdr: ChangeDetectorRef;
-  public elementRef: ElementRef;
-  public ngZone: NgZone;
-  private scrollSubscription;
+  public viewedPages = [];
+
   @ViewChild('scrollTarget') scrollTarget: ElementRef;
-  @ViewChild('scrollElement') scrollElement: ElementRef;
+  @ViewChild('scrollDownElement') scrollDownElement: ElementRef;
+  @ViewChild('scrollUpElement') scrollUpElement: ElementRef;
+  // not using
+  public orderPropertyTypeList;
   constructor(
     private orderListService: OrderListService,
-    el: ElementRef,
-    ngZone: NgZone,
     public appRef: ApplicationRef
   ) {
-    this.elementRef = el;
-    this.ngZone = ngZone;
     this.orderPropertyTypeList = Object.create({});
 
     const order = new Order();
@@ -117,20 +117,125 @@ export class OrderListComponent
     // involve everyone
   }
 
-  async getOrderList(page) {
+  async loadList(direction) {
     this.isLoading = true;
+    if (direction === 'down') {
+      this.currentPage = Math.max(...this.viewedPages) + 1;
+      const result = await this.getOrderList(this.currentPage);
+      if (result.error === 0) {
+        this.hasMoreDown = result.result.nextPage;
+        this.orders = [
+          ...this.orders,
+          ...(result.result &&
+            result.result.items &&
+            result.result.items.map(el => {
+              return {
+                ...el,
+                distanceLeft: distanceInMiBetweenEarthCoordinates(
+                  el.deliveryLocation.lat,
+                  el.deliveryLocation.long,
+                  el.currentLocation.lat,
+                  el.currentLocation.long
+                ),
+                totalDistance: distanceInMiBetweenEarthCoordinates(
+                  el.deliveryLocation.lat,
+                  el.deliveryLocation.long,
+                  el.vendorLocation.lat,
+                  el.vendorLocation.long
+                )
+              };
+            }))
+        ];
+
+        this.checkQueue(this.currentPage, direction);
+        if (Math.min(...this.viewedPages) > 1) {
+          this.hasMoreUp = true;
+        } else {
+          this.hasMoreUp = false;
+        }
+        console.log(this.orders);
+        // TODO: as the listener runs outside angular, I need to call tick() each time of variable changes
+        // Good practice is to extract the lazy load into a shared module, then add getOrderList as
+        // event listener to the lazy load directive
+        // But due to time limit this code becomes cumbersome...
+        this.appRef.tick();
+
+        this.isLoading = false;
+      } else {
+        // TODO: notice user data failed
+        this.isLoading = false;
+      }
+    } else if (direction === 'up') {
+      this.currentPage = Math.min(...this.viewedPages) - 1;
+      const result = await this.getOrderList(this.currentPage);
+      if (result.error === 0) {
+        this.orders = [
+          ...(result.result &&
+            result.result.items &&
+            result.result.items.map(el => {
+              return {
+                ...el,
+                distanceLeft: distanceInMiBetweenEarthCoordinates(
+                  el.deliveryLocation.lat,
+                  el.deliveryLocation.long,
+                  el.currentLocation.lat,
+                  el.currentLocation.long
+                ),
+                totalDistance: distanceInMiBetweenEarthCoordinates(
+                  el.deliveryLocation.lat,
+                  el.deliveryLocation.long,
+                  el.vendorLocation.lat,
+                  el.vendorLocation.long
+                )
+              };
+            })),
+          ...this.orders
+        ];
+
+        this.checkQueue(this.currentPage, direction);
+        if (Math.min(...this.viewedPages) > 1) {
+          this.hasMoreUp = true;
+        } else {
+          this.hasMoreUp = false;
+        }
+        console.log(this.orders);
+        // TODO: as the listener runs outside angular, I need to call tick() each time of variable changes
+        // Good practice is to extract the lazy load into a shared module, then add getOrderList as
+        // event listener to the lazy load directive
+        // But due to time limit this code becomes cumbersome...
+        this.appRef.tick();
+
+        this.isLoading = false;
+      } else {
+        // TODO: notice user data failed
+        this.isLoading = false;
+      }
+    }
+  }
+
+  async getOrderList(page) {
     // TODO: error handler
     const resOrders = await this.orderListService
       .getOrders(page)
       .first()
       .toPromise();
-    if (resOrders.error === 0) {
-      this.hasMore = resOrders.result.nextPage;
+    return resOrders;
+  }
+  async ngOnInit() {
+    window.onresize = event => {
+      this.fixHeight = window.innerHeight - 200;
+    };
+    this.isLoading = true;
+
+    const result = await this.getOrderList(this.currentPage);
+
+    if (result.error === 0) {
+      this.hasMoreDown = result.result.nextPage;
       this.orders = [
         ...this.orders,
-        ...(resOrders.result &&
-          resOrders.result.items &&
-          resOrders.result.items.map(el => {
+        ...(result.result &&
+          result.result.items &&
+          result.result.items.map(el => {
             return {
               ...el,
               distanceLeft: distanceInMiBetweenEarthCoordinates(
@@ -148,6 +253,8 @@ export class OrderListComponent
             };
           }))
       ];
+
+      this.checkQueue(this.currentPage, 'down');
       console.log(this.orders);
       // TODO: as the listener runs outside angular, I need to call tick() each time of variable changes
       // Good practice is to extract the lazy load into a shared module, then add getOrderList as
@@ -160,16 +267,6 @@ export class OrderListComponent
       // TODO: notice user data failed
       this.isLoading = false;
     }
-    return resOrders;
-  }
-  async ngOnInit() {
-    const result = await this.getOrderList(this.currentPage);
-    if (this.hasMore) {
-      this.getLazyLoadControl();
-    }
-    window.onresize = event => {
-      this.fixHeight = window.innerHeight - 200;
-    };
   }
 
   ngOnChanges(): void {
@@ -183,151 +280,38 @@ export class OrderListComponent
     componentHandler.upgradeDom();
   }
 
-  ngOnDestroy() {
-    [this.scrollSubscription]
-      .filter(subscription => subscription && !subscription.isUnsubscribed)
-      .forEach(subscription => subscription.unsubscribe());
-  }
+  ngOnDestroy() {}
 
   ngAfterContentInit() {}
 
-  // Scroll to load event listener
-  // TODO: Need to seperate below code as a shared module
+  public checkQueue(page, direction) {
+    if (direction === 'down') {
+      // enqueue
+      this.viewedPages = [...this.viewedPages, page];
+      // check if queue is full
+      if (this.viewedPages.length <= pageQueueLimit) {
+        console.log('Q_' + JSON.stringify(this.viewedPages));
+        return;
+      }
+      // dequeue
+      this.viewedPages.splice(0, 1);
+      console.log('Q_' + JSON.stringify(this.viewedPages));
+      this.orders.splice(0, ordersPerPage);
+    } else if (direction === 'up') {
+      // enqueue
+      this.viewedPages = [page, ...this.viewedPages];
+      // check if queue is full
+      if (this.viewedPages.length <= pageQueueLimit) {
+        console.log('Q_' + JSON.stringify(this.viewedPages));
+        return;
+      }
+      // dequeue
+      this.viewedPages = this.viewedPages.slice(0, this.viewedPages.length - 1);
+      console.log('Q_' + JSON.stringify(this.viewedPages));
 
-  public getLazyLoadControl() {
-    if (typeof window === 'undefined') {
-      return null;
-    }
-
-    this.ngZone.runOutsideAngular(() => {
-      let scrollObservable: Observable<Event>;
-      scrollObservable = getScrollListener(this.scrollTarget.nativeElement);
-
-      this.scrollSubscription = Observable.of('Started')
-        // switch the stream to subscribe once the element comes to the viewport
-        .switchMap(stream =>
-          scrollObservable.pipe(
-            lazyLoad(
-              this.scrollElement.nativeElement,
-              this.scrollTarget.nativeElement
-            )
-          )
-        )
-        .debounceTime(debounceTimeOut)
-        .subscribe(success => {
-          this.currentPage = this.currentPage + 1;
-          return this.getOrderList(this.currentPage);
-        });
-    });
-  }
-}
-
-// TODO: to make extendable (generic) event listener across application
-
-export const getScrollListener = (scrollTarget): Observable<any> => {
-  const scrollListeners = new WeakMap<any, Observable<any>>();
-  if (!scrollTarget || typeof scrollTarget.addEventListener !== 'function') {
-    return Observable.empty();
-  }
-  if (scrollListeners.has(scrollTarget)) {
-    return scrollListeners.get(scrollTarget);
-  }
-  const srollEvent = Observable.create(observer => {
-    const eventName = 'scroll';
-    const handler = event => observer.next(event);
-    const options = { passive: true, capture: false };
-
-    // TODO: not tested if compatible to IE11 :: addEventListener ::
-    scrollTarget.addEventListener(eventName, handler, options);
-    return () => scrollTarget.removeEventListener(eventName, handler, options);
-  });
-
-  // Pipe scroll event every 100ms
-  const listener = srollEvent
-    .sampleTime(scrollEventTimeout)
-    .share()
-    .startWith('');
-  scrollListeners.set(scrollTarget, listener);
-  return listener;
-};
-
-export function lazyLoad(el, target) {
-  return (scrollObservable: Observable<Event>) => {
-    return (
-      scrollObservable
-        .filter(() => isVisible(el, target))
-        // .take(1)
-        .map(() => true)
-    );
-  };
-}
-
-export function isVisible(element: HTMLElement, scrollContainer?: HTMLElement) {
-  const elementBounds = Rect.fromElement(element);
-  if (elementBounds === Rect.empty) {
-    return false;
-  }
-  const windowBounds = Rect.fromWindow(window);
-
-  if (scrollContainer) {
-    const scrollContainerBounds = Rect.fromElement(scrollContainer);
-    const intersection = scrollContainerBounds.getIntersectionWith(
-      windowBounds
-    );
-    return elementBounds.intersectsWith(intersection);
-  } else {
-    return elementBounds.intersectsWith(windowBounds);
-  }
-}
-
-export class Rect {
-  static empty: Rect = new Rect(0, 0, 0, 0);
-
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-
-  constructor(left: number, top: number, right: number, bottom: number) {
-    this.left = left;
-    this.top = top;
-    this.right = right;
-    this.bottom = bottom;
-  }
-
-  static fromElement(element: HTMLElement): Rect {
-    const { left, top, right, bottom } = element.getBoundingClientRect();
-
-    if (left === 0 && top === 0 && right === 0 && bottom === 0) {
-      return Rect.empty;
-    } else {
-      return new Rect(left, top, right, bottom);
-    }
-  }
-
-  static fromWindow(_window: Window): Rect {
-    return new Rect(0, 0, _window.innerWidth, _window.innerHeight);
-  }
-
-  intersectsWith(rect: Rect): boolean {
-    return (
-      rect.left < this.right &&
-      this.left < rect.right &&
-      rect.top < this.bottom &&
-      this.top < rect.bottom
-    );
-  }
-
-  getIntersectionWith(rect: Rect): Rect {
-    const left = Math.max(this.left, rect.left);
-    const top = Math.max(this.top, rect.top);
-    const right = Math.min(this.right, rect.right);
-    const bottom = Math.min(this.bottom, rect.bottom);
-
-    if (right >= left && bottom >= top) {
-      return new Rect(left, top, right, bottom);
-    } else {
-      return Rect.empty;
+      this.orders = this.orders.splice(0, this.orders.length - ordersPerPage);
+      this.hasMoreDown = true;
+      this.appRef.tick();
     }
   }
 }
