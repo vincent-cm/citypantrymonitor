@@ -12,7 +12,7 @@ And lively querying a large data set from the different servers merely output it
 the modern NoSQL.
 
 What I suggest to do is to create a render queue, as drawn below:
-Pages not in the viewport -+ offset will be removed from the DOM
+Pages not in the viewport (-+ offset) will be removed from the DOM
 to save the render performance of browsers
 
 |||||||||removed from DOM||||||||||lazyLoaded to DOM||||||||||||||||||removed from DOM|||||||||||||||||
@@ -22,13 +22,14 @@ A lazyloaded, smooth scrolling with cancellable + debouncing data loading is pre
 
 1) We need to know if there is `nextPage` in the last response.
 2) If the `nextPage` is true, we create a `loading dom` element appending to the original rows to increase the scrollHeight.
-The purpose here is to let user know it can be scrolled down.
-3) We set a default `debouncingTimeOut` as if user scrolls up to make the loading dom onto our viewport,
+The purpose here is to let user scroll down to trigger the new API call.
+3) We set a default `debounceTimeOut` as if user scrolls up to make the `loading dom` onto our viewport,
 the timeout starts.
-4) If the loading dom is scroll back down within the timeout, the attempted API call will be cancelled.
-But if the loading dom still in our viewport or within a `lazyLoadOffset`, the API call will be fired.
+4) If the `loading dom` is scroll back down within the timeout, 1500ms, the attempted API call will be cancelled.
+But if the loading dom still in our viewport or within an offset (not implemented), the API call will be fired.
 
-Future improvements:
+To optimise the UI rendering memory usage, I created a queue that remove old data from the top if we considered
+the DOM added are too many to perform on mobile devices.
 
 */
 
@@ -60,6 +61,7 @@ import {
   catchError
 } from 'rxjs/operators';
 import 'rxjs/add/operator/finally';
+import 'rxjs/add/operator/first';
 
 import { OrderListService } from '../services/order-list.service';
 import { Order } from '../model/order.model';
@@ -77,7 +79,7 @@ export class OrderListComponent
   public orders: Order[] = [];
   public isLoading = false;
   public currentPage = 1;
-  public hasMore = true;
+  public hasMore = false;
   public orderPropertyTypeList;
   public fixHeight = window.innerHeight - 200;
   public cdr: ChangeDetectorRef;
@@ -117,53 +119,51 @@ export class OrderListComponent
 
   async getOrderList(page) {
     this.isLoading = true;
-    this.orderListService.getOrders(page).subscribe(
-      resOrders => {
-        if (resOrders.error === 0) {
-          this.hasMore = resOrders.result.nextPage;
-          this.orders = [
-            ...this.orders,
-            ...(resOrders.result &&
-              resOrders.result.items &&
-              resOrders.result.items.map(el => {
-                return {
-                  ...el,
-                  distanceLeft: distanceInMiBetweenEarthCoordinates(
-                    el.deliveryLocation.lat,
-                    el.deliveryLocation.long,
-                    el.currentLocation.lat,
-                    el.currentLocation.long
-                  ),
-                  totalDistance: distanceInMiBetweenEarthCoordinates(
-                    el.deliveryLocation.lat,
-                    el.deliveryLocation.long,
-                    el.vendorLocation.lat,
-                    el.vendorLocation.long
-                  )
-                };
-              }))
-          ];
-          console.log(this.orders);
-          //TODO: as the listener runs outside angular, I need to call tick() each time of UI changes
-          // Good practice is extract the whole lazy load into a module, then add getOrderList as
-          // event listener, assign an event emitter @output to the lazy load directive
-          // But due to time limit this code becomes cumbersome...
-          this.appRef.tick();
+    // TODO: error handler
+    const resOrders = await this.orderListService
+      .getOrders(page)
+      .first()
+      .toPromise();
+    if (resOrders.error === 0) {
+      this.hasMore = resOrders.result.nextPage;
+      this.orders = [
+        ...this.orders,
+        ...(resOrders.result &&
+          resOrders.result.items &&
+          resOrders.result.items.map(el => {
+            return {
+              ...el,
+              distanceLeft: distanceInMiBetweenEarthCoordinates(
+                el.deliveryLocation.lat,
+                el.deliveryLocation.long,
+                el.currentLocation.lat,
+                el.currentLocation.long
+              ),
+              totalDistance: distanceInMiBetweenEarthCoordinates(
+                el.deliveryLocation.lat,
+                el.deliveryLocation.long,
+                el.vendorLocation.lat,
+                el.vendorLocation.long
+              )
+            };
+          }))
+      ];
+      console.log(this.orders);
+      // TODO: as the listener runs outside angular, I need to call tick() each time of variable changes
+      // Good practice is to extract the lazy load into a shared module, then add getOrderList as
+      // event listener to the lazy load directive
+      // But due to time limit this code becomes cumbersome...
+      this.appRef.tick();
 
-          this.isLoading = false;
-        } else {
-          // TODO: notice user data failed
-          this.isLoading = false;
-        }
-      },
-      err => {
-        // TODO: handle(error)
-        this.isLoading = false;
-      }
-    );
+      this.isLoading = false;
+    } else {
+      // TODO: notice user data failed
+      this.isLoading = false;
+    }
+    return resOrders;
   }
   async ngOnInit() {
-    await this.getOrderList(this.currentPage);
+    const result = await this.getOrderList(this.currentPage);
     if (this.hasMore) {
       this.getLazyLoadControl();
     }
@@ -204,7 +204,7 @@ export class OrderListComponent
       scrollObservable = getScrollListener(this.scrollTarget.nativeElement);
 
       this.scrollSubscription = Observable.of('Started')
-        // switch the stream to determine if the element comes to the viewport
+        // switch the stream to subscribe once the element comes to the viewport
         .switchMap(stream =>
           scrollObservable.pipe(
             lazyLoad(
@@ -268,7 +268,6 @@ export function isVisible(element: HTMLElement, scrollContainer?: HTMLElement) {
     return false;
   }
   const windowBounds = Rect.fromWindow(window);
-  elementBounds.inflate(0);
 
   if (scrollContainer) {
     const scrollContainerBounds = Rect.fromElement(scrollContainer);
@@ -308,13 +307,6 @@ export class Rect {
 
   static fromWindow(_window: Window): Rect {
     return new Rect(0, 0, _window.innerWidth, _window.innerHeight);
-  }
-
-  inflate(inflateBy: number) {
-    this.left -= inflateBy;
-    this.top -= inflateBy;
-    this.right += inflateBy;
-    this.bottom += inflateBy;
   }
 
   intersectsWith(rect: Rect): boolean {

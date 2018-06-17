@@ -130,12 +130,12 @@
               </td>
             </tr>
 
-            <ng-container *ngIf="hasMore; else elseTemplate">
+            <ng-container *ngIf="hasMore; else downIf">
               <tr #scrollElement>
                 <app-spin-kit></app-spin-kit>
               </tr>
             </ng-container>
-            <ng-template #elseTemplate>
+            <ng-template #downIf>
               <tr>
                 <div class="center-info">No More Data</div>
               </tr>
