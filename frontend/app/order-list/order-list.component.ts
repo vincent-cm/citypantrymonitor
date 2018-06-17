@@ -31,6 +31,15 @@ But if the loading dom still in our viewport or within an offset (not implemente
 To optimise the UI rendering memory usage, I created a queue that remove old data from the top if we considered
 the DOM added are too many to perform on mobile devices.
 
+
+======================================================================================
+Future work:
+1. After triggerring scroll and new API call, the `dom element` should be hidden and 
+triggered as `scroll to load` UI like twitter.
+
+2. Due to the time limit, I just write some test on services for illustration only.
+======================================================================================
+
 */
 
 import {
