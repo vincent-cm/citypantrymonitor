@@ -44,7 +44,7 @@
             </ng-container>
             <ng-template #upIf>
             </ng-template>
-            <tr *ngFor="let item of orders; let idx=index">
+            <tr *ngFor="let item of orders; let idx=index; trackBy: trackById">
               <td class="mdl-data-table__cell--non-numeric">
                 <small class="text-muted">Customer</small>
                 <div class="font-weight-bold">

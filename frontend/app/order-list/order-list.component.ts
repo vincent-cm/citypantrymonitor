@@ -73,9 +73,7 @@ import 'rxjs/add/operator/finally';
 import 'rxjs/add/operator/first';
 import { OrderListService } from '../services/order-list.service';
 import { Order } from '../model/order.model';
-import {
-  distanceInMiBetweenEarthCoordinates,
-} from '../utility/tools';
+import { distanceInMiBetweenEarthCoordinates } from '../utility/tools';
 import { pageQueueLimit, ordersPerPage } from '../utility/resource';
 declare var componentHandler: any;
 
@@ -275,6 +273,10 @@ export class OrderListComponent
       // TODO: notice user data failed
       this.isLoading = false;
     }
+  }
+
+  trackById(index, item) {
+    return item.id;
   }
 
   ngOnChanges(): void {
