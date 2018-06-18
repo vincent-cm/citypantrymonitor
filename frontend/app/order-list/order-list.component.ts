@@ -292,6 +292,7 @@ export class OrderListComponent
 
   ngAfterContentInit() {}
 
+  // TODO: need to abstract, and enqueue()/dequeue()/getQueue()
   public checkQueue(page, direction) {
     if (direction === 'down') {
       // enqueue
