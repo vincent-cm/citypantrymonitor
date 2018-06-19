@@ -320,7 +320,7 @@ export class OrderListComponent
       this.viewedPages = this.viewedPages.slice(0, this.viewedPages.length - 1);
       console.log('Q_' + JSON.stringify(this.viewedPages));
 
-      this.orders = this.orders.splice(0, this.orders.length - ordersPerPage);
+      this.orders = this.orders.slice(0, this.orders.length - ordersPerPage);
       this.hasMoreDown = true;
       this.appRef.tick();
     }
