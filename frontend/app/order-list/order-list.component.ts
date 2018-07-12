@@ -1,47 +1,3 @@
-/*
-I expect the core requirement is to build a user-friendly data loading experience.
-Usually, we create a pagination data table for doing such
-But, it is considered not a good practice for both usability and backend performance
-
-i.e., user may not want to use following navigator to browse data:
-
-<first page 1 ><prev>......[345], [current page 346], [347].....<next><end page 2000>
-
-because personally, I do not care about what page I am reading and how long exactly the data is.
-And lively querying a large data set from the different servers merely output its length is nearly impossible for
-the modern NoSQL.
-
-What I suggest to do is to create a render queue, as drawn below:
-Pages not in the viewport (-+ offset) will be removed from the DOM
-to save the render performance of browsers
-
-|||||||||removed from DOM||||||||||lazyLoaded to DOM||||||||||||||||||removed from DOM|||||||||||||||||
-                                   [in the viewport]
-
-A lazyloaded, smooth scrolling with cancellable + debouncing data loading is presented.
-
-1) We need to know if there is `nextPage` in the last response.
-2) If the `nextPage` is true, we create a `loading dom` element appending to the original rows to increase the scrollHeight.
-The purpose here is to let user scroll down to trigger the new API call.
-3) We set a default `debounceTimeOut` as if user scrolls up to make the `loading dom` onto our viewport,
-the timeout starts.
-4) If the `loading dom` is scroll back down within the timeout, 1500ms, the attempted API call will be cancelled.
-But if the loading dom still in our viewport or within an offset (not implemented), the API call will be fired.
-
-To optimise the UI rendering memory usage, I created a queue that remove old data from the top if we considered
-the DOM added are too many to perform on mobile devices.
-
-
-======================================================================================
-Future work:
-1. After triggerring scroll and new API call, the `dom element` should be hidden and 
-triggered as `scroll to load` UI like twitter.
-
-2. Due to the time limit, I just write some test on services for illustration only.
-======================================================================================
-
-*/
-
 import {
   Component,
   OnInit,
@@ -161,10 +117,7 @@ export class OrderListComponent
         }
         console.log(this.orders);
         // TODO: as the listener runs outside angular, I need to call tick() each time of variable changes
-        // Good practice is to extract the lazy load into a shared module, then add getOrderList as
-        // event listener to the lazy load directive
-        // But due to time limit this code becomes cumbersome...
-        this.appRef.tick();
+         this.appRef.tick();
 
         this.isLoading = false;
       } else {
@@ -206,9 +159,6 @@ export class OrderListComponent
         }
         console.log(this.orders);
         // TODO: as the listener runs outside angular, I need to call tick() each time of variable changes
-        // Good practice is to extract the lazy load into a shared module, then add getOrderList as
-        // event listener to the lazy load directive
-        // But due to time limit this code becomes cumbersome...
         this.appRef.tick();
 
         this.isLoading = false;
@@ -263,9 +213,6 @@ export class OrderListComponent
       this.checkQueue(this.currentPage, 'down');
       console.log(this.orders);
       // TODO: as the listener runs outside angular, I need to call tick() each time of variable changes
-      // Good practice is to extract the lazy load into a shared module, then add getOrderList as
-      // event listener to the lazy load directive
-      // But due to time limit this code becomes cumbersome...
       this.appRef.tick();
 
       this.isLoading = false;
